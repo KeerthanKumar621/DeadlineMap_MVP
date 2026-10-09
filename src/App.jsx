@@ -1,5 +1,6 @@
 import React, {
   createContext,
+   useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -263,10 +264,22 @@ function AppProvider({ children }) {
     return savedAssignment;
   };
 
+  const logout = useCallback(async () => {
+  const { error } = await supabase.auth.signOut();
+
+  if (error) {
+    console.error("Logout failed:", error.message);
+    throw error;
+  }
+
+  setAssignments([]);
+  setSuccess(null);
+}, []);
   const value = useMemo(
     () => ({
       assignments,
       user,
+      logout,
       authLoading,
       assignmentsLoading,
       success,
@@ -276,7 +289,7 @@ function AppProvider({ children }) {
       updateAssignment,
       resetDemo: () => setSuccess(null),
     }),
-    [assignments, user, authLoading, assignmentsLoading, success]
+    [assignments, user, logout , authLoading, assignmentsLoading, success]
   );
 
   return (
@@ -576,7 +589,7 @@ function Login() {
 // --------------------------------------------------
 
 function Dashboard() {
-  const { assignments, user, assignmentsLoading } = useApp();
+  const { assignments, user, logout , assignmentsLoading } = useApp();
   const navigate = useNavigate();
 
   const risk = calculateRisk(assignments);
@@ -599,10 +612,29 @@ function Dashboard() {
       title="Your workload at a glance"
       eyebrow="DASHBOARD"
       action={
-        <Button icon={Plus} onClick={() => navigate("/add-assignment")}>
-          Add assignment
-        </Button>
-      }
+  <div style={{ display: "flex", gap: "8px" }}>
+    <Button
+      icon={Plus}
+      onClick={() => navigate("/add-assignment")}
+    >
+      Add assignment
+    </Button>
+
+    <Button
+      variant="secondary"
+      onClick={async () => {
+        try {
+          await logout();
+          navigate("/login", { replace: true });
+        } catch (error) {
+          alert("Logout failed. Please try again.");
+        }
+      }}
+    >
+      Logout
+    </Button>
+  </div>
+}     
     >
       <section className="welcome-row">
         <div>
